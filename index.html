@@ -8,6 +8,8 @@
   <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <!-- html2canvas for saving only the PNL card -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     :root{
@@ -230,11 +232,9 @@
       outline:0; border:0; background:transparent;
       margin:0 auto;                        /* stick to bottom via parent flex-end */
     }
-    .pnl-close{
-      position:absolute; top:-12px; right:-12px; width:32px; height:32px; border-radius:50%;
-      background:#111; border:1px solid #2e2e2e; color:#fff; display:flex; align-items:center; justify-content:center;
-      cursor:pointer; z-index:2;
-    }
+
+    /* HIDE close (scissor/X) on the profit card/modal as requested */
+    .pnl-close{ display:none !important; }
 
     /* Light-ash scene around the card (matches uploaded photo)
        SHIFT LEFT ≈ 1cm as requested */
@@ -328,7 +328,6 @@
     .pnl-underbar .action:hover { transform:translateY(-2px); background:#242632; border-color:#3a3b47; }
     .pnl-underbar .action img { width:18px; height:18px; display:block; }
     .pnl-underbar .action span { font-size:10px; color:#cfd3dc; }
-    /* =================== / PNL SHARE MODAL =================== */
   </style>
 </head>
 <body>
@@ -467,6 +466,7 @@
   <!-- ===================== SHARE MODAL (BOTTOM ANCHORED) ===================== -->
   <div class="pnl-modal-backdrop" id="pnlBackdrop" aria-hidden="true">
     <div class="pnl-modal" role="dialog" aria-modal="true" aria-labelledby="pnlTitle">
+      <!-- Close button hidden by CSS per requirement -->
       <button class="pnl-close" id="pnlClose" title="Close"><i class="fa-solid fa-xmark"></i></button>
 
       <!-- Light ash scene wrapper (adds side/top/bottom background around the card) -->
@@ -583,9 +583,6 @@
     const realizedSpan = document.getElementById("realizedSpan");
     const eye = document.getElementById("eyeToggle");
 
-    const BAL_MIN = 350000, BAL_MAX = 500000;
-    const REALIZED_MIN_PCT = 0.50, REALIZED_MAX_PCT = 2.00;
-
     let showTop = true;
     let marginBalanceTarget = 0;
     let realizedTodayUSD = 0;
@@ -608,7 +605,7 @@
     const quantizeToTick = (price, tickSize) => { const step = parseFloat(tickSize); if (!isFinite(price) || !isFinite(step) || step <= 0) return price; return Math.round(price / step) * step; };
     const quantizeDownToStep = (qty, stepSize) => { const step = parseFloat(stepSize); if (!isFinite(qty) || !isFinite(step) || step <= 0) return qty; return Math.floor(qty / step) * step; };
     function joinIntDec(i, d) { const I = numberWithCommas(i); return d !== undefined ? I + '.' + d : I; }
-    function shuffle(arr){ for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+    function shuffle(arr){ for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j]]; } return arr; }
 
     /* ====== NEW: photo-slot logic (defaults + persistence) ====== */
     const SLOT_KEY_PREFIX = 'photo_slot_';
@@ -935,7 +932,7 @@
       pnlEls.backdrop.setAttribute('aria-hidden','true');
       currentSharedTrade = null;
     }
-    pnlEls.close.addEventListener('click', closePNLModal);
+    // Still allow closing by tapping the backdrop
     pnlEls.backdrop.addEventListener('click', (e)=>{ if(e.target === pnlEls.backdrop) closePNLModal(); });
 
     document.querySelectorAll('input[name="infoMode"]').forEach(r=>{
@@ -960,43 +957,63 @@
       pnlEls.entry.textContent = formatPrice(t.sym, t.entry);
       pnlEls.last.textContent  = formatPrice(t.sym, t.mark);
     }
-    /* ======== / PNL MODAL LOGIC ======== */
 
+    /* ========= SAVE ONLY THE PNL CARD AS IMAGE ========= */
+    async function saveOnlyPNLCard(){
+      const card = document.getElementById('pnlCard');
+      if(!card) return;
+      const canvas = await html2canvas(card, { backgroundColor: null, scale: 2, useCORS: true });
+      const dataURL = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      const name = (pnlEls.title.textContent || 'PNL_Card').replace(/\s+/g,'_');
+      a.href = dataURL;
+      a.download = `${name}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    // Hook the Save action
+    document.addEventListener('click', (e)=>{
+      const saveBtn = e.target.closest('.pnl-underbar .action[title="Save"]');
+      if(saveBtn){ saveOnlyPNLCard(); }
+    });
+
+    /* ======== INIT ======== */
     (async function init(){
       sizeFeed();
-      const BAL_MIN = 350000, BAL_MAX = 500000;
-      const REALIZED_MIN_PCT = 0.50, REALIZED_MAX_PCT = 2.00;
 
-      let marginBalanceTarget = Math.round(((BAL_MIN + Math.random()*(BAL_MAX - BAL_MIN)) + Number.EPSILON) * 100) / 100;
-      let realizedTodayPct = REALIZED_MIN_PCT + Math.random()*(REALIZED_MAX_PCT - REALIZED_MIN_PCT);
-      let realizedTodayUSD = marginBalanceTarget * (realizedTodayPct/100);
+      // Generate a margin balance target first (base for the realized %)
+      const BAL_MIN = 350000, BAL_MAX = 500000;
+      marginBalanceTarget = Math.round((BAL_MIN + Math.random()*(BAL_MAX - BAL_MIN)) * 100) / 100;
 
       initPhotoSlots();
 
       await seedWithFuturesMark6M();
       forceTwoSmallLossesRandom();
 
+      // Compute initial unrealized based on seeded trades
       let initialUnreal = 0;
       for (const t of trades) { initialUnreal += (t.side === 'LONG') ? upnlLong(t.mark, t.entry, t.qty) : upnlShort(t.mark, t.entry, t.qty); }
       unrealizedSum = initialUnreal;
       walletBalance = marginBalanceTarget - unrealizedSum;
 
-      const amountEl = document.getElementById("amount");
-      const walletEl = document.getElementById("walletValue");
-      const unrealEl = document.getElementById("unrealizedValue");
-      const realizedSpan = document.getElementById("realizedSpan");
+      // >>> STRICT RANGE for today's realized PNL: $2,500 - $8,500
+      const REALIZED_MIN_USD = 2500;
+      const REALIZED_MAX_USD = 8500;
+      realizedTodayUSD = REALIZED_MIN_USD + Math.random() * (REALIZED_MAX_USD - REALIZED_MIN_USD);
+      // derive % from marginBalanceTarget for consistency
+      realizedTodayPct = (realizedTodayUSD / marginBalanceTarget) * 100;
 
-      const fmtMoney = (n) => "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const fmtPct = (n) => (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
-
-      amountEl.textContent   = fmtMoney(walletBalance + unrealizedSum);
-      walletEl.textContent   = fmtMoney(walletBalance);
-      unrealEl.textContent   = fmtMoney(unrealizedSum);
+      // Paint top panel
+      amountEl.textContent     = fmtMoney(walletBalance + unrealizedSum);
+      walletEl.textContent     = fmtMoney(walletBalance);
+      unrealEl.textContent     = fmtMoney(unrealizedSum);
       realizedSpan.textContent = `${fmtMoney(realizedTodayUSD)} (${fmtPct(realizedTodayPct)})`;
 
       connectFuturesMarkWS();
     })();
 
+    // Set placeholders (in case init is slow)
     document.getElementById("amount").textContent = "Loading…";
     document.getElementById("walletValue").textContent = "Loading…";
     document.getElementById("unrealizedValue").textContent = "Loading…";
