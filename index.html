@@ -39,16 +39,16 @@
       --frame-gutter-x: 8px;
       --card-inset: 2px;
 
-      /* UPDATED: photo slot sizes (smaller) */
+      /* photo slot sizes (smaller) */
       --slot-top: 16px;
       --slot-bottom: 14px;
 
-      /* NEW: bottom nav height (set by JS on load / resize) */
+      /* bottom nav height (set by JS on load / resize) */
       --bottom-nav-h: 64px;
 
-      /* >>> NEW: Requested offset for the light-ash scene + card + icons <<< */
-      --scene-shift-x: -0.8cm;   /* move left by ~0.8 cm */
-      --scene-shift-y: 0.45cm;   /* move slightly down (tweak if needed) */
+      /* >>> OFFSET FOR THE LIGHT-ASH SCENE + CARD + ICONS <<< */
+      --scene-shift-x: -0.8cm;   /* keep your previous left offset */
+      --scene-shift-y: 1.25cm;   /* ⬅️ increased: moves everything further DOWN */
     }
 
     *{margin:0;padding:0;box-sizing:border-box}
@@ -195,32 +195,18 @@
     .bottom-nav button{flex:1;display:flex;flex-direction:column;align-items:center;font-size:10px;color:#A1A6B0}
     .bottom-nav button.active{color:#FFF}
 
-    /* ===== NEW: photo slots (no frame) ===== */
+    /* ===== photo slots ===== */
     .photo-slot{
       width:var(--slot-top); height:var(--slot-top);
       display:inline-block; position:relative; overflow:hidden; border:none; outline:none;
       background:transparent; border-radius:4px;
     }
     .photo-slot--bottom{ width:var(--slot-bottom); height:var(--slot-bottom); border-radius:3px; }
-    .photo-slot input[type="file"]{
-      position:absolute; inset:0; opacity:0; cursor:pointer;
-    }
+    .photo-slot input[type="file"]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
     .photo-slot img{
-      width:88%;
-      height:88%;
-      margin:6%;
-      object-fit:cover;
-      display:block;
-      border:none; outline:none; background:transparent;
-      image-rendering:auto;
+      width:88%; height:88%; margin:6%; object-fit:cover; display:block; border:none; outline:none; background:transparent; image-rendering:auto;
     }
-    .photo-slot--bottom img{
-      width:90%;
-      height:90%;
-      margin:5%;
-      object-fit:cover;
-      display:block;
-    }
+    .photo-slot--bottom img{ width:90%; height:90%; margin:5%; object-fit:cover; display:block; }
     .photo-empty::after{ content:''; position:absolute; inset:0; background:transparent; }
 
     /* ===================== PNL SHARE MODAL (BOTTOM-ANCHORED) ===================== */
@@ -248,7 +234,7 @@
       align-items:center;
       box-shadow:0 8px 20px rgba(0,0,0,.35) inset;
 
-      /* >>> NEW: apply the requested visual offset <<< */
+      /* >>> apply the requested visual offset <<< */
       transform: translate(var(--scene-shift-x), var(--scene-shift-y));
     }
 
@@ -321,7 +307,7 @@
     .pnl-underbar .action img { width:18px; height:18px; display:block; }
     .pnl-underbar .action span { font-size:10px; color:#cfd3dc; }
 
-    /* ======= SPECIAL: style for digit '1' inside pnl-card ======= */
+    /* style for digit '1' inside pnl-card */
     .pnl-card .one-glyph{
       font-family: "Binance PLEX", Inter, "Segoe UI", system-ui, -apple-system, sans-serif !important;
       font-weight: 700;
@@ -464,8 +450,7 @@
   <div class="pnl-modal-backdrop" id="pnlBackdrop" aria-hidden="true">
     <div class="pnl-modal" role="dialog" aria-modal="true" aria-labelledby="pnlTitle">
 
-      <!-- >>> The WHOLE group below (light-ash bg + pnl-card + selector + action icons)
-           is shifted by CSS transform on .pnl-scene using the variables above <<< -->
+      <!-- WHOLE group is shifted via --scene-shift-* -->
       <div class="pnl-scene">
         <!-- PNL card -->
         <div class="pnl-card" id="pnlCard">
@@ -600,7 +585,7 @@
     const quantizeToTick = (price, tickSize) => { const step = parseFloat(tickSize); if (!isFinite(price) || !isFinite(step) || step <= 0) return price; return Math.round(price / step) * step; };
     const quantizeDownToStep = (qty, stepSize) => { const step = parseFloat(stepSize); if (!isFinite(qty) || !isFinite(step) || step <= 0) return qty; return Math.floor(qty / step) * step; };
     function joinIntDec(i, d) { const I = numberWithCommas(i); return d !== undefined ? I + '.' + d : I; }
-    function shuffle(arr){ for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+    function shuffle(arr){ for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j]]; } return arr; }
     const randInt = (min, max) => Math.floor(Math.random()*(max-min+1))+min;
 
     /* ====== photo-slot logic ====== */
@@ -884,7 +869,7 @@
       ws.onerror=(err)=>{ console.error('[WS] Error', err); try{ ws.close(); }catch{} };
     }
 
-    /* ===== BOTTOM SAFE-INSET FOR MODAL (keeps card above Home/Assets) ===== */
+    /* ===== BOTTOM SAFE-INSET FOR MODAL ===== */
     function setBottomInset(){
       const nav = document.getElementById('bottomNav');
       const h = nav ? Math.max(56, Math.ceil(nav.getBoundingClientRect().height)) : 64;
@@ -928,7 +913,7 @@
       pnlEls.backdrop.setAttribute('aria-hidden','true');
       currentSharedTrade = null;
     }
-    // Backdrop click still closes modal (icon removed only)
+    // Backdrop click closes modal
     pnlEls.backdrop.addEventListener('click', (e)=>{ if(e.target === pnlEls.backdrop) closePNLModal(); });
 
     document.querySelectorAll('input[name="infoMode"]').forEach(r=>{
@@ -999,7 +984,7 @@
       // Wallet = Equity - Unrealized
       walletBalance = marginBalanceTarget - unrealizedSum;
 
-      // ---- REQUIREMENT: Realized PNL between $2,500 and $8,500 ----
+      // Realized PNL range
       realizedTodayUSD = randInt(2500, 8500);
       realizedTodayPct = walletBalance > 0 ? (realizedTodayUSD / walletBalance) * 100 : 0;
 
@@ -1020,7 +1005,7 @@
     document.getElementById("realizedSpan").textContent = "Loading…";
   </script>
 
-  <!-- ========= ONE-GLYPH PATCH (make all digit '1' inside pnl-card use Binance PLEX) ========= -->
+  <!-- ========= ONE-GLYPH PATCH ========= -->
   <script>
     (function(){
       const pnlCard = document.getElementById('pnlCard');
@@ -1034,7 +1019,6 @@
             acceptNode: (node) => {
               if (!node.nodeValue || node.nodeValue.indexOf('1') === -1) return NodeFilter.FILTER_REJECT;
               const p = node.parentNode;
-              // ignore if parent is a script/style or already inside our span
               if (!p || p.classList && p.classList.contains('one-glyph')) return NodeFilter.FILTER_REJECT;
               if (p.closest && p.closest('.no-one-stylize')) return NodeFilter.FILTER_REJECT;
               return NodeFilter.FILTER_ACCEPT;
