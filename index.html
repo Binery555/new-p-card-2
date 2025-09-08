@@ -45,10 +45,6 @@
 
       /* NEW: bottom nav height (set by JS on load / resize) */
       --bottom-nav-h: 64px;
-
-      /* >>> NEW: precise shift for ash background + PNL card + icons <<< */
-      --scene-shift-x: -0.7cm;  /* move LEFT by 0.7 cm */
-      --scene-shift-y: 0.45cm;  /* move DOWN a little */
     }
 
     *{margin:0;padding:0;box-sizing:border-box}
@@ -227,7 +223,8 @@
     .pnl-modal-backdrop{
       position:fixed; inset:0; background:rgba(0,0,0,.6);
       display:none; align-items:flex-end; justify-content:center; z-index:1000;
-      padding:0 12px calc(var(--bottom-nav-h) + 10px);
+      /* ↓↓↓ Closer to bottom icons per request */
+      padding:0 12px calc(var(--bottom-nav-h) - 2px);
     }
     .pnl-modal-backdrop.open{ display:flex; }
     .pnl-modal{ position:relative; max-width:520px; width:100%; outline:0; border:0; background:transparent; }
@@ -248,8 +245,8 @@
       align-items:center;
       box-shadow:0 8px 20px rgba(0,0,0,.35) inset;
 
-      /* >>> NEW: shift whole scene (ash bg + card + icons) <<< */
-      transform: translate(var(--scene-shift-x), var(--scene-shift-y));
+      /* >>> SHIFT: left ~0.5cm and slightly down <<< */
+      transform: translate(-0.5cm, 0.12cm);
     }
 
     /* Namespaced PNL card */
@@ -291,7 +288,6 @@
     .pnl-card .footer-content { padding:16px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
     .pnl-card .footer-left { font-size:12px; display:flex; align-items:center; gap:8px; line-height:1.1; }
     .pnl-card .footer-left .binance-badge { display:inline-flex; align-items:center; gap:6px; margin-bottom:2px; transform:translateX(-.3cm); }
-    .pnl-card .footer-left .binance-badge img { width:16px; height:16px; }
     .pnl-card .footer-left .binance-badge .brand { color:#fcd535; font-weight:800; }
     .pnl-card .footer-left .futures-ref { transform:translateX(.3cm); }
 
