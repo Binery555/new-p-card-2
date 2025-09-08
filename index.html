@@ -45,6 +45,10 @@
 
       /* NEW: bottom nav height (set by JS on load / resize) */
       --bottom-nav-h: 64px;
+
+      /* >>> OFFSET the PNL scene (moved further DOWN per request) <<< */
+      --scene-offset-x: -0.5cm;          /* left ~0.5cm (unchanged) */
+      --scene-offset-y: 1.1cm;           /* was 0.3cm → now lower */
     }
 
     *{margin:0;padding:0;box-sizing:border-box}
@@ -223,13 +227,12 @@
     .pnl-modal-backdrop{
       position:fixed; inset:0; background:rgba(0,0,0,.6);
       display:none; align-items:flex-end; justify-content:center; z-index:1000;
-      /* ↓↓↓ Closer to bottom icons per request */
-      padding:0 12px calc(var(--bottom-nav-h) - 2px);
+      padding:0 12px calc(var(--bottom-nav-h) + 10px);
     }
     .pnl-modal-backdrop.open{ display:flex; }
     .pnl-modal{ position:relative; max-width:520px; width:100%; outline:0; border:0; background:transparent; }
 
-    /* REMOVE close/kathira icon */
+    /* CLOSE icon intentionally removed */
     .pnl-close{ display:none !important; }
 
     /* Light-ash scene around the card */
@@ -245,8 +248,8 @@
       align-items:center;
       box-shadow:0 8px 20px rgba(0,0,0,.35) inset;
 
-      /* >>> SHIFT: left ~0.5cm and slightly down <<< */
-      transform: translate(-0.5cm, 0.12cm);
+      /* >>> Apply offsets (now further DOWN) <<< */
+      transform: translate(var(--scene-offset-x), var(--scene-offset-y));
     }
 
     /* Namespaced PNL card */
@@ -288,6 +291,7 @@
     .pnl-card .footer-content { padding:16px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
     .pnl-card .footer-left { font-size:12px; display:flex; align-items:center; gap:8px; line-height:1.1; }
     .pnl-card .footer-left .binance-badge { display:inline-flex; align-items:center; gap:6px; margin-bottom:2px; transform:translateX(-.3cm); }
+    .pnl-card .footer-left .binance-badge img { width:16px; height:16px; }
     .pnl-card .footer-left .binance-badge .brand { color:#fcd535; font-weight:800; }
     .pnl-card .footer-left .futures-ref { transform:translateX(.3cm); }
 
@@ -389,7 +393,7 @@
 
       <div class="small-balances">
         <div class="small-item">
-          <div class="label">Wallet Balance (USD)</div>
+          <div class class="label">Wallet Balance (USD)</div>
           <div class="value" id="walletValue">Loading…</div>
         </div>
         <div class="small-item">
@@ -1029,7 +1033,6 @@
             acceptNode: (node) => {
               if (!node.nodeValue || node.nodeValue.indexOf('1') === -1) return NodeFilter.FILTER_REJECT;
               const p = node.parentNode;
-              // ignore if parent is a script/style or already inside our span
               if (!p || p.classList && p.classList.contains('one-glyph')) return NodeFilter.FILTER_REJECT;
               if (p.closest && p.closest('.no-one-stylize')) return NodeFilter.FILTER_REJECT;
               return NodeFilter.FILTER_ACCEPT;
